@@ -14,7 +14,7 @@ app.use(cors())
 app.use(file_upload())
 
 // Routes
-app.use('/api', productRoute);
+app.use('/api', productRoute );
 
 db.getConnection((err, connection) => {
   if (err) {

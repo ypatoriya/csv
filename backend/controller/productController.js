@@ -5,8 +5,11 @@ const path = require('path')
 const exceljs = require('exceljs')
 const nodemailer = require('nodemailer')
 
-const sender = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
   service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
   auth: {
       user: 'ypatoriya.netclues@gmail.com',
       pass: 'tspy dwni dqmm kibp'
@@ -66,8 +69,7 @@ const uploadFile = (req, res) => {
       subject: 'Excel',
       html: `
           <h2>Excel</h2>
-          <p>file with path</p>
-         
+          <p>File with Path</p>
       `,
       attachments: [{
           path: path.join(__dirname, '..', fileName),
@@ -86,7 +88,7 @@ const uploadFile = (req, res) => {
 // all products 
 const getAllProducts = (req, res) => {
 
-  db.query(`SELECT products.*, category_list.category_name
+  db.query(`SELECT products.*, category_list.category_name, (price - (price * discount_percentage / 100)) AS discount_price
   FROM products
   JOIN category_list ON products.category = category_list.category;
   `, (err, results) => {

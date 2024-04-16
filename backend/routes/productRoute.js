@@ -10,6 +10,6 @@ router.get('/data', getAllProducts);
 
 router.get('/export', exportToExcel);
 
-router.post('/mail', sendMail)
+// router.post('/mail', sendMail)
 
 module.exports = router;
