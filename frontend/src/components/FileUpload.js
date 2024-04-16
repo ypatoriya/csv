@@ -20,7 +20,7 @@ const FileUploader = ({ onFileUpload }) => {
             'Content-Type': 'multipart/form-data'
           }
         });
-        onFileUpload(); // Optionally, trigger a callback after successful upload
+        onFileUpload(); 
       } catch (error) {
         console.error(error);
       }

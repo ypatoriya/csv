@@ -3,9 +3,19 @@ const fs = require('fs');
 const xlsx = require('xlsx')
 const path = require('path')
 const exceljs = require('exceljs')
+const nodemailer = require('nodemailer')
+
+const sender = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+      user: 'ypatoriya.netclues@gmail.com',
+      pass: 'tspy dwni dqmm kibp'
+  }
+});
 
 
 const uploadFile = (req, res) => {
+  
   console.log(req.files);
   if (!req.files || Object.keys(req.files).length === 0) {
     return res.status(400).send('No files were uploaded.');
@@ -38,7 +48,6 @@ const uploadFile = (req, res) => {
         ]);
       });
 
-
       const insertQuery = 'INSERT INTO products (product_name, product_id, sku, variant_id, price, discount_percentage, description, category) VALUES ?';
 
       db.query(insertQuery, [values], (err, result) => {
@@ -50,6 +59,26 @@ const uploadFile = (req, res) => {
         }
       });
     });
+
+    const mailOptions = {
+      from: process.env.EMAIL,
+      to: 'ypatoriya.netclues@gmail.com',
+      subject: 'Excel',
+      html: `
+          <h2>Excel</h2>
+          <p>file with path</p>
+         
+      `,
+      attachments: [{
+          path: path.join(__dirname, '..', fileName),
+          file: fileName.name
+      }]
+  };
+
+  transporter.sendMail(mailOptions, function (err, info) {
+    if (err) console.log(err);
+    else console.log('Email sent:', info);})
+
 };
 
 
