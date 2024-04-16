@@ -2,33 +2,37 @@ const db = require('../db');
 const fs = require('fs');
 const xlsx = require('xlsx')
 const path = require('path')
-const exceljs = require('exceljs')
 const nodemailer = require('nodemailer')
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
-      user: 'ypatoriya.netclues@gmail.com',
-      pass: 'tspy dwni dqmm kibp'
+    user: 'ypatoriya.netclues@gmail.com',
+    pass: 'tspy dwni dqmm kibp'
   }
 });
 
 
 const uploadFile = (req, res) => {
-  
-  console.log(req.files);
+
   if (!req.files || Object.keys(req.files).length === 0) {
     return res.status(400).send('No files were uploaded.');
   }
+
+  const dirExists = fs.existsSync(`public/uploads/`);
+
+        if (!dirExists) { 
+            fs.mkdirSync(`public/uploads/`, { recursive: true });
+        } 
 
   const file = req.files.file;
   const fileName = `./public/uploads/${Date.now()}_${file.name}`;
   console.log(file);
 
-  file.mv(fileName, (err) => {
+  file.mv(fileName, (err) => { 
     if (err) {
       return res.status(500).send(err);
     }
@@ -37,49 +41,57 @@ const uploadFile = (req, res) => {
     const sheetName = workbook.SheetNames[0];
     const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-      let values = [];
-      sheetData.forEach((row) => {
-        values.push([
-          row.product_name,
-          row.product_id,
-          row.sku,
-          row.variant_id,
-          row.price,
-          row.discount_percentage,
-          row.description,
-          row.category
-        ]);
-      });
+    let values = [];
+    sheetData.forEach((row) => {
 
-      const insertQuery = 'INSERT INTO products (product_name, product_id, sku, variant_id, price, discount_percentage, description, category) VALUES ?';
-
-      db.query(insertQuery, [values], (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).send('Internal Server Error');
-        } else {
-          res.send('File uploaded successfully.');
-        }
-      });
+      values.push([
+        row.product_name,
+        row.product_id,
+        row.sku,
+        row.variant_id,
+        row.price,
+        row.discount_percentage,
+        row.description,
+        row.category
+      ]);
     });
 
-    const mailOptions = {
-      from: process.env.EMAIL,
-      to: 'ypatoriya.netclues@gmail.com',
-      subject: 'Excel',
-      html: `
-          <h2>Excel</h2>
-          <p>File with Path</p>
-      `,
-      attachments: [{
-          path: path.join(__dirname, '..', fileName),
-          file: fileName.name
-      }]
-  };
+    const insertQuery = 'INSERT INTO products (product_name, product_id, sku, variant_id, price, discount_percentage, description, category) VALUES ?';
 
-  transporter.sendMail(mailOptions, function (err, info) {
-    if (err) console.log(err);
-    else console.log('Email sent:', info);})
+    db.query(insertQuery, [values], (err, result) => {
+      if (err) {
+        console.error('Error executing SQL query:', err);
+        console.error('Query:', insertQuery);
+        console.error('Values:', values);
+        console.error(err);
+        return res.status(500).send('Internal Server Error');
+      } else {
+
+        const numRowsAffected = result.affectedRows; 
+        const mailOptions = {
+          from: process.env.EMAIL,
+          to: 'ypatoriya.netclues@gmail.com',
+          subject: 'Excel Upload Report',
+          html: `
+            <h2>Excel Upload Report</h2>
+            <p>${numRowsAffected} rows affected.</p>
+            <p>File with Path</p> 
+          `,
+          attachments: [{
+            path: path.join(__dirname, '..', fileName),
+            file: fileName.name
+          }]
+        };
+
+        transporter.sendMail(mailOptions, function (err, info) {
+          if (err) console.log(err);
+          else console.log('Email sent:', info);
+        });
+
+        res.send('File uploaded successfully.');
+      }
+    });
+  });
 
 };
 
@@ -110,7 +122,7 @@ const exportToExcel = (req, res) => {
       console.error(err);
       res.status(500).send('Internal Server Error');
     } else {
-      
+
       const workbook = new excel.Workbook();
       const worksheet = workbook.addWorksheet('Products');
 
@@ -122,19 +134,19 @@ const exportToExcel = (req, res) => {
         { header: 'Variant ID', key: 'variant_id' },
         { header: 'Price', key: 'price' },
         { header: 'Discount', key: 'discount_percentage' },
-        { header: 'Price After Discount', key: 'price_after_discount' } // New column for price after discount
+        { header: 'Price After Discount', key: 'price_after_discount' } 
       ];
 
-   
+
       results.forEach((product) => {
         worksheet.addRow(product);
       });
 
-   
+
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', 'attachment; filename="products.xlsx"');
 
-    
+
       workbook.xlsx.write(res)
         .then(() => {
           res.end();

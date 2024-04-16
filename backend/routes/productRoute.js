@@ -1,5 +1,5 @@
 const express = require('express');
-const { uploadFile, getAllProducts, exportToExcel, sendMail } = require('../controller/productController');
+const { uploadFile, getAllProducts, exportToExcel } = require('../controller/productController');
 const router = express.Router();
 
 

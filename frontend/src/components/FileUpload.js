@@ -35,7 +35,7 @@ const FileUploader = ({ onFileUpload }) => {
         </label>
         <input
           type="file"
-          accept=".csv,.xlsx,.xls" // Allow Excel files to be selected
+          accept=".csv,.xlsx,.xls" 
           className="form-control-file"
           id="fileInput"
           onChange={handleFileChange}

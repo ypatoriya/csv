@@ -11,8 +11,8 @@ function App() {
      
         <Routes>
           <Route path="/" element={<DataTable />} />
-          <Route path='/fileUpload' element={<FileUpload/>} />
-          <Route path='/excel' element={<ExportToExcelButton/>} />
+          <Route path='/import' element={<FileUpload/>} />
+          <Route path='/export' element={<ExportToExcelButton/>} />
         </Routes>
         
     </Router>
