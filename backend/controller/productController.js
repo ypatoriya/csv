@@ -24,9 +24,9 @@ const uploadFile = (req, res) => {
 
   const dirExists = fs.existsSync(`public/uploads/`);
 
-        if (!dirExists) { 
-            fs.mkdirSync(`public/uploads/`, { recursive: true });
-        } 
+  if (!dirExists) { 
+    fs.mkdirSync(`public/uploads/`, { recursive: true });
+  } 
 
   const file = req.files.file;
   const fileName = `./public/uploads/${Date.now()}_${file.name}`;
@@ -43,7 +43,6 @@ const uploadFile = (req, res) => {
 
     let values = [];
     sheetData.forEach((row) => {
-
       values.push([
         row.product_name,
         row.product_id,
@@ -56,43 +55,61 @@ const uploadFile = (req, res) => {
       ]);
     });
 
-    const insertQuery = 'INSERT INTO products (product_name, product_id, sku, variant_id, price, discount_percentage, description, category) VALUES ?';
+    //check from sheet
+    const existingVariantIds = sheetData.map(row => row.variant_id);
 
-    db.query(insertQuery, [values], (err, result) => {
+    const checkQuery = 'SELECT variant_id FROM products WHERE variant_id IN (?)';
+    db.query(checkQuery, [existingVariantIds], (err, result) => {
       if (err) {
         console.error('Error executing SQL query:', err);
-        console.error('Query:', insertQuery);
-        console.error('Values:', values);
-        console.error(err);
+        console.error('Query:', checkQuery);
+        console.error('Values:', existingVariantIds);
         return res.status(500).send('Internal Server Error');
-      } else {
-
-        const numRowsAffected = result.affectedRows; 
-        const mailOptions = {
-          from: process.env.EMAIL,
-          to: 'ypatoriya.netclues@gmail.com',
-          subject: 'Excel Upload Report',
-          html: `
-            <h2>Excel Upload Report</h2>
-            <p>${numRowsAffected} rows affected.</p>
-            <p>File with Path</p> 
-          `,
-          attachments: [{
-            path: path.join(__dirname, '..', fileName),
-            file: fileName.name
-          }]
-        };
-
-        transporter.sendMail(mailOptions, function (err, info) {
-          if (err) console.log(err);
-          else console.log('Email sent:', info);
-        });
-
-        res.send('File uploaded successfully.');
       }
+
+      const existingIds = result.map(row => row.variant_id);
+      const duplicateIds = existingVariantIds.filter(id => existingIds.includes(id));
+
+      if (duplicateIds.length > 0) {
+        return res.status(400).send(`Variant IDs already exist: ${duplicateIds.join(', ')}`);
+      }
+
+      const insertQuery = 'INSERT INTO products (product_name, product_id, sku, variant_id, price, discount_percentage, description, category) VALUES ?';
+
+      db.query(insertQuery, [values], (err, result) => {
+        if (err) {
+          console.error('Error executing SQL query:', err);
+          console.error('Query:', insertQuery);
+          console.error('Values:', values);
+          console.error(err);
+          return res.status(500).send('Internal Server Error');
+        } else {
+          const numRowsAffected = result.affectedRows; 
+          const mailOptions = {
+            from: process.env.EMAIL,
+            to: 'ypatoriya.netclues@gmail.com',
+            subject: 'Excel Upload Report',
+            html: `
+              <h2>Excel Upload Report</h2>
+              <p>${numRowsAffected} rows affected.</p>
+              <p>File with Path</p> 
+            `,
+            attachments: [{
+              path: path.join(__dirname, '..', fileName),
+              file: fileName.name
+            }]
+          };
+
+          transporter.sendMail(mailOptions, function (err, info) {
+            if (err) console.log(err);
+            else console.log('Email sent:', info);
+          });
+
+          res.send('File uploaded successfully.');
+        }
+      });
     });
   });
-
 };
 
 
